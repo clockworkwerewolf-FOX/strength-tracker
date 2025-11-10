@@ -1,7 +1,38 @@
-// Browser-compatible version - Ready to use!
+// Browser-compatible version with localStorage - Ready to use!
 const React = window.React;
 const { useState, useEffect } = React;
 const { Calendar, TrendingUp, Dumbbell, Award, Book, Camera, Clock, ChevronDown, ChevronUp, Search, Download } = lucide;
+
+// Simple localStorage wrapper that mimics the storage API
+const storage = {
+  async get(key) {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? { value } : null;
+    } catch (error) {
+      console.error('Storage get error:', error);
+      return null;
+    }
+  },
+  async set(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return { key, value };
+    } catch (error) {
+      console.error('Storage set error:', error);
+      return null;
+    }
+  },
+  async delete(key) {
+    try {
+      localStorage.removeItem(key);
+      return { key, deleted: true };
+    } catch (error) {
+      console.error('Storage delete error:', error);
+      return null;
+    }
+  }
+};
 
 // PWA Install Prompt Component
 const InstallPrompt = ({ onDismiss }) => {
@@ -347,10 +378,10 @@ const StrengthTracker = () => {
 
   const loadData = async () => {
     try {
-      const workoutsResult = await window.storage.get('workouts');
-      const photosResult = await window.storage.get('photos');
-      const streakResult = await window.storage.get('streak');
-      const phaseResult = await window.storage.get('phase');
+      const workoutsResult = await storage.get('workouts');
+      const photosResult = await storage.get('photos');
+      const streakResult = await storage.get('streak');
+      const phaseResult = await storage.get('phase');
       
       if (workoutsResult?.value) setWorkouts(JSON.parse(workoutsResult.value));
       if (photosResult?.value) setPhotos(JSON.parse(photosResult.value));
@@ -364,7 +395,7 @@ const StrengthTracker = () => {
 
   const saveWorkouts = async (newWorkouts) => {
     try {
-      await window.storage.set('workouts', JSON.stringify(newWorkouts));
+      await storage.set('workouts', JSON.stringify(newWorkouts));
       setWorkouts(newWorkouts);
     } catch (error) {
       console.error('Error saving:', error);
@@ -373,7 +404,7 @@ const StrengthTracker = () => {
 
   const savePhotos = async (newPhotos) => {
     try {
-      await window.storage.set('photos', JSON.stringify(newPhotos));
+      await storage.set('photos', JSON.stringify(newPhotos));
       setPhotos(newPhotos);
     } catch (error) {
       console.error('Error saving photos:', error);
@@ -382,7 +413,7 @@ const StrengthTracker = () => {
 
   const saveStreak = async (newStreak) => {
     try {
-      await window.storage.set('streak', newStreak.toString());
+      await storage.set('streak', newStreak.toString());
       setStreak(newStreak);
     } catch (error) {
       console.error('Error saving streak:', error);
@@ -602,134 +633,135 @@ const HomeView = ({ streak, getDaysSinceLastWorkout, getBackOnMessage, getWeekly
   const muscleGroups = getWeeklyMuscleGroups();
   const allMuscles = ['Chest', 'Shoulders', 'Triceps', 'Biceps', 'Lats', 'Upper Back', 'Core', 'Lower Back', 'Quads', 'Hamstrings', 'Glutes', 'Forearms', 'Hip Flexors'];
   
-  return React.createElement('div', { className: 'p-4 space-y-4' },
-    React.createElement('div', { className: 'bg-gray-800 rounded-lg p-6' },
-      React.createElement('div', { className: 'flex items-center justify-between mb-4' },
-        React.createElement('div', null,
-          React.createElement('p', { className: 'text-gray-400 text-sm' }, 'Attempt Streak'),
-          React.createElement('p', { className: 'text-4xl font-bold text-blue-400' }, streak),
-          React.createElement('p', { className: 'text-gray-400 text-xs mt-1' }, 'attempts in a row')
-        ),
-        React.createElement(Award, { className: 'w-16 h-16 text-yellow-500' })
-      ),
-      React.createElement('div', { className: 'border-t border-gray-700 pt-4' },
-        React.createElement('p', { className: 'text-sm text-gray-300' }, getBackOnMessage()),
-        getDaysSinceLastWorkout() > 0 && React.createElement('p', { className: 'text-xs text-gray-500 mt-2' },
-          getDaysSinceLastWorkout() + ' days since last workout'
-        )
-      )
-    ),
+  return (
+    <div className="p-4 space-y-4">
+      <div className="bg-gray-800 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-gray-400 text-sm">Attempt Streak</p>
+            <p className="text-4xl font-bold text-blue-400">{streak}</p>
+            <p className="text-gray-400 text-xs mt-1">attempts in a row</p>
+          </div>
+          <Award className="w-16 h-16 text-yellow-500" />
+        </div>
+        <div className="border-t border-gray-700 pt-4">
+          <p className="text-sm text-gray-300">{getBackOnMessage()}</p>
+          {getDaysSinceLastWorkout() > 0 && (
+            <p className="text-xs text-gray-500 mt-2">
+              {getDaysSinceLastWorkout()} days since last workout
+            </p>
+          )}
+        </div>
+      </div>
 
-    React.createElement('div', { className: 'bg-gray-800 rounded-lg p-4' },
-      React.createElement('h3', { className: 'text-lg font-semibold mb-3 flex items-center' },
-        React.createElement(TrendingUp, { className: 'w-5 h-5 mr-2 text-green-400' }),
-        'This Week\'s Muscle Groups'
-      ),
-      Object.keys(muscleGroups).length === 0 ?
-        React.createElement('p', { className: 'text-sm text-gray-400' }, 'No workouts logged this week yet') :
-        React.createElement('div', { className: 'space-y-2' },
-          allMuscles.map(muscle => {
-            const count = muscleGroups[muscle] || 0;
-            const percentage = count > 0 ? Math.min((count / 10) * 100, 100) : 0;
-            return React.createElement('div', { key: muscle },
-              React.createElement('div', { className: 'flex justify-between text-sm mb-1' },
-                React.createElement('span', { className: count === 0 ? 'text-gray-500' : 'text-gray-300' }, muscle),
-                React.createElement('span', { className: count === 0 ? 'text-gray-600' : 'text-blue-400' }, count + 'x')
-              ),
-              React.createElement('div', { className: 'bg-gray-700 rounded-full h-2' },
-                React.createElement('div', {
-                  className: `h-2 rounded-full ${
-                    count === 0 ? 'bg-gray-600' :
-                    count < 3 ? 'bg-yellow-500' :
-                    count < 6 ? 'bg-green-500' :
-                    'bg-blue-500'
-                  }`,
-                  style: { width: percentage + '%' }
-                })
-              )
-            );
-          })
-        ),
-      React.createElement('p', { className: 'text-xs text-gray-500 mt-3' },
-        'Aim for balanced training across all muscle groups'
-      )
-    ),
+      <div className="bg-gray-800 rounded-lg p-4">
+        <h3 className="text-lg font-semibold mb-3 flex items-center">
+          <TrendingUp className="w-5 h-5 mr-2 text-green-400" />
+          This Week's Muscle Groups
+        </h3>
+        {Object.keys(muscleGroups).length === 0 ? (
+          <p className="text-sm text-gray-400">No workouts logged this week yet</p>
+        ) : (
+          <div className="space-y-2">
+            {allMuscles.map(muscle => {
+              const count = muscleGroups[muscle] || 0;
+              const percentage = count > 0 ? Math.min((count / 10) * 100, 100) : 0;
+              return (
+                <div key={muscle}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className={count === 0 ? 'text-gray-500' : 'text-gray-300'}>{muscle}</span>
+                    <span className={count === 0 ? 'text-gray-600' : 'text-blue-400'}>{count}x</span>
+                  </div>
+                  <div className="bg-gray-700 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${
+                        count === 0 ? 'bg-gray-600' :
+                        count < 3 ? 'bg-yellow-500' :
+                        count < 6 ? 'bg-green-500' :
+                        'bg-blue-500'
+                      }`}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-xs text-gray-500 mt-3">
+          Aim for balanced training across all muscle groups
+        </p>
+      </div>
 
-    React.createElement('div', { className: 'space-y-3' },
-      React.createElement('h2', { className: 'text-lg font-semibold text-gray-300' }, 'Today\'s Options'),
-      
-      React.createElement('button', {
-        onClick: () => setView('workout-a'),
-        className: 'w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-lg text-left transition'
-      },
-        React.createElement('div', { className: 'flex items-center justify-between' },
-          React.createElement('div', null,
-            React.createElement('p', { className: 'font-semibold' }, 'Workout A'),
-            React.createElement('p', { className: 'text-sm text-blue-200' }, 'Lower body & push')
-          ),
-          React.createElement(Dumbbell, { className: 'w-6 h-6' })
-        )
-      ),
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold text-gray-300">Today's Options</h2>
+        
+        <button
+          onClick={() => setView('workout-a')}
+          className="w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-lg text-left transition"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold">Workout A</p>
+              <p className="text-sm text-blue-200">Lower body & push</p>
+            </div>
+            <Dumbbell className="w-6 h-6" />
+          </div>
+        </button>
 
-      React.createElement('button', {
-        onClick: () => setView('workout-b'),
-        className: 'w-full bg-purple-600 hover:bg-purple-700 p-4 rounded-lg text-left transition'
-      },
-        React.createElement('div', { className: 'flex items-center justify-between' },
-          React.createElement('div', null,
-            React.createElement('p', { className: 'font-semibold' }, 'Workout B'),
-            React.createElement('p', { className: 'text-sm text-purple-200' }, 'Deadlift & pull')
-          ),
-          React.createElement(Dumbbell, { className: 'w-6 h-6' })
-        )
-      ),
+        <button
+          onClick={() => setView('workout-b')}
+          className="w-full bg-purple-600 hover:bg-purple-700 p-4 rounded-lg text-left transition"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold">Workout B</p>
+              <p className="text-sm text-purple-200">Deadlift & pull</p>
+            </div>
+            <Dumbbell className="w-6 h-6" />
+          </div>
+        </button>
 
-      React.createElement('button', {
-        onClick: () => setView('emergency'),
-        className: 'w-full bg-orange-600 hover:bg-orange-700 p-4 rounded-lg text-left transition'
-      },
-        React.createElement('div', { className: 'flex items-center justify-between' },
-          React.createElement('div', null,
-            React.createElement('p', { className: 'font-semibold' }, 'Emergency Workout'),
-            React.createElement('p', { className: 'text-sm text-orange-200' }, '3 minutes - just stay consistent')
-          ),
-          React.createElement(Dumbbell, { className: 'w-6 h-6' })
-        )
-      ),
+        <button
+          onClick={() => setView('emergency')}
+          className="w-full bg-orange-600 hover:bg-orange-700 p-4 rounded-lg text-left transition"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold">Emergency Workout</p>
+              <p className="text-sm text-orange-200">3 minutes - just stay consistent</p>
+            </div>
+            <Dumbbell className="w-6 h-6" />
+          </div>
+        </button>
 
-      React.createElement('button', {
-        onClick: () => logAttempt('attempt-only'),
-        className: 'w-full bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-left transition border-2 border-gray-600'
-      },
-        React.createElement('div', { className: 'flex items-center justify-between' },
-          React.createElement('div', null,
-            React.createElement('p', { className: 'font-semibold' }, 'I Made an Attempt'),
-            React.createElement('p', { className: 'text-sm text-gray-300' }, 'Count it and keep the streak alive')
-          ),
-          React.createElement(Award, { className: 'w-6 h-6' })
-        )
-      )
-    ),
+        <button
+          onClick={() => logAttempt('attempt-only')}
+          className="w-full bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-left transition border-2 border-gray-600"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold">I Made an Attempt</p>
+              <p className="text-sm text-gray-300">Count it and keep the streak alive</p>
+            </div>
+            <Award className="w-6 h-6" />
+          </div>
+        </button>
+      </div>
 
-    React.createElement('div', { className: 'bg-gray-800 rounded-lg p-4' },
-      React.createElement('div', { className: 'flex items-center justify-between' },
-        React.createElement('div', null,
-          React.createElement('p', { className: 'text-sm text-gray-400' }, 'Current Phase'),
-          React.createElement('p', { className: 'text-2xl font-bold text-green-400' }, 'Phase ' + phase),
-          React.createElement('p', { className: 'text-xs text-gray-500 mt-1' }, 'Foundation Building')
-        ),
-        React.createElement(TrendingUp, { className: 'w-12 h-12 text-green-400' })
-      )
-    )
+      <div className="bg-gray-800 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-400">Current Phase</p>
+            <p className="text-2xl font-bold text-green-400">Phase {phase}</p>
+            <p className="text-xs text-gray-500 mt-1">Foundation Building</p>
+          </div>
+          <TrendingUp className="w-12 h-12 text-green-400" />
+        </div>
+      </div>
+    </div>
   );
 };
-
-// Note: The remaining components (WorkoutView, ExerciseCard, ExerciseLibraryView, etc.) 
-// would also need to be converted to React.createElement format, but due to length constraints,
-// I'm providing a shortened version. The full conversion follows the same pattern.
-
-// For the full working version, you can use JSX with Babel standalone (already included in index.html)
-// So let me provide the JSX version instead which works with Babel:
 
 const WorkoutView = ({ type, exercises, onComplete, onBack }) => {
   const [completedExercises, setCompletedExercises] = useState([]);
